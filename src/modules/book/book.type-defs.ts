@@ -1,10 +1,4 @@
 export const bookTypeDefs = /* GraphQL */ `
-  enum BookSubject {
-    FANTASY
-    HISTORY
-    SCIENCE
-  }
-
   enum BookLookupErrorCode {
     INVALID_INPUT
     NOT_FOUND
@@ -31,6 +25,5 @@ export const bookTypeDefs = /* GraphQL */ `
 
   extend type Query {
     book(id: ID!): BookLookupResult!
-    booksBySubject(subject: BookSubject!, limit: Int = 5): [Book!]!
   }
 `;

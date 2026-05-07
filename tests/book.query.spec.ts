@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type AppContext } from '../src/context.js';
 import { type RestBookRecord, UpstreamServiceError } from '../src/datasources/open-library-api.js';
-import { type BookSubject } from '../src/modules/book/book.types.js';
 import { createServer } from '../src/server.js';
 
 const lookupQuery = /* GraphQL */ `
@@ -22,33 +21,21 @@ const lookupQuery = /* GraphQL */ `
   }
 `;
 
-const collectionQuery = /* GraphQL */ `
-  query Collection($subject: BookSubject!, $limit: Int) {
-    booksBySubject(subject: $subject, limit: $limit) {
-      id
-      name
-    }
-  }
-`;
 
 const primary: RestBookRecord = { id: 'OL262758W', name: 'The Hobbit', author: 'J. R. R. Tolkien', subjectName: 'Fantasy', firstPublished: 1937, subjects: ['Fantasy', 'Adventure'] };
-const second: RestBookRecord = { id: 'OL893415W', name: 'Dune', author: 'Frank Herbert', subjectName: 'Science', firstPublished: 1965, subjects: ['Science'] };
-const third: RestBookRecord = { id: 'OL46370W', name: 'Foundation', author: 'Isaac Asimov', subjectName: 'Science', firstPublished: 1951, subjects: ['Science'] };
 
 const createMockContext = () => {
   const getBookById = vi.fn(async (_id: string) => null as RestBookRecord | null);
-  const getBooksBySubject = vi.fn(async (_subject: BookSubject) => [] as RestBookRecord[]);
 
   const context: AppContext = {
     dataSources: {
       openLibraryApi: {
         getBookById,
-        getBooksBySubject,
       },
     },
   };
 
-  return { context, getBookById, getBooksBySubject };
+  return { context, getBookById };
 };
 
 const executeSingle = async (query: string, variables: Record<string, unknown>, contextValue: AppContext) => {
@@ -141,39 +128,6 @@ describe('book queries', () => {
           message: 'Open Library is currently unavailable.',
         },
       },
-    });
-  });
-
-  it('sorts books by name before applying the limit', async () => {
-    const { context, getBooksBySubject } = createMockContext();
-    getBooksBySubject.mockResolvedValue([second, primary, third]);
-
-    const result = await executeSingle(collectionQuery, { subject: 'SCIENCE', limit: 2 }, context);
-
-    expect(result.errors).toBeUndefined();
-    expect(result.data).toEqual({
-      booksBySubject: [
-        {
-          id: 'OL893415W',
-          name: 'Dune',
-        },
-        {
-          id: 'OL46370W',
-          name: 'Foundation',
-        },
-      ],
-    });
-  });
-
-  it('treats a negative limit as zero', async () => {
-    const { context, getBooksBySubject } = createMockContext();
-    getBooksBySubject.mockResolvedValue([second, primary, third]);
-
-    const result = await executeSingle(collectionQuery, { subject: 'SCIENCE', limit: -3 }, context);
-
-    expect(result.errors).toBeUndefined();
-    expect(result.data).toEqual({
-      booksBySubject: [],
     });
   });
 });
